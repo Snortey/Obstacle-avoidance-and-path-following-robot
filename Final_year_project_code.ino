@@ -1,25 +1,27 @@
-#include <TimerFreeTone.h>
+#include <TimerFreeTone.h>// Library for the Buzzer
 #include <AFMotor.h>  // Library for the motors
 #include <Servo.h>    // Library for the servo motor
-
 #include <NewPing.h>  // Library for the ultrasonic sensor
+#include <IRremote.h> //Library for the IR reciever
 
 
 
 //Ultrasonic sensor
 #define TriggerPin A3
 #define EchoPin A2
-#define max_distance 200 //50 at first
-
+#define max_distance 50 //50 at first
 //Infrared Sensor
-#define IrLeft A5 //Left line sensor
-#define IrRight A4 //Right line sensor
-
+#define IrLeft A0 //Left line sensor
+#define IrRight A5 //Right line sensor
 //Pezzo Buzzer
 #define buzzer A1
 //motor
 #define MaxSpeed 200
 #define MaxSpeed_Offset 20
+//speed of the motoes
+#define SPEED1 58 //54
+#define SPEED2 97
+#define SPEED3 60
 
 //creates an instance of the Servo class for controlling the servo motor.
 Servo servo;
@@ -43,10 +45,14 @@ AF_DCMotor motor4(Motor_4, MOTOR34_1KHZ);
 //declares variables for storing the distances detected by the sensors.
 int distance =0;
 int LeftDistance = 0;
-int RightDistance =0;
+int RightDistance = 0;
+int IRLEFT=0;
+int IRRIGHT =0;
+int set = 6;
+String STATE = " ";
+char val;
 //boolean variable for determining the direction of the turn
 boolean Object;
-
 
 void setup() {
   // put your setup code here, to run once:
@@ -54,64 +60,89 @@ void setup() {
   Serial.println("Start");
 
   servo.attach(10);//attaches the Servo object to pin 10
-  servo.write(90); //sets the initial position of the servo to 90 degrees
+  servo.write(95); //sets the initial position of the servo to 90 degrees
 
   pinMode(IrLeft, INPUT); // sets the pins for the infrared sensors as inputs
   pinMode(IrRight, INPUT);
 
   pinMode(buzzer, OUTPUT);
 
-  //initial speed of the motors
-  motor1.setSpeed(180);
-  motor2.setSpeed(180);
-  motor3.setSpeed(180);
-  motor4.setSpeed(180);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   //If both sensors detect a line, it calls the objectAvoid() function and moves forward
-  Serial.println(digitalRead(IrLeft));
-  delay(500);
-  Serial.println(digitalRead(IrRight));
-  delay(500);
-  if (digitalRead(IrLeft) == 0 && digitalRead(IrRight) == 0 ) {
-    objectAvoid();
-  }
-  //If only the left sensor detects a line, it calls the objectAvoid() function, moves right, and prints "TR" to the serial monitor.
-  else if (digitalRead(IrLeft) == 1 && digitalRead(IrRight) == 0 ) {
-    objectAvoid();
-    Serial.println("TL");
-    moveLeft();
+
+  // if(Serial.available() > 0){
+  //   val = Serial.read();
+  //   Stop();
+  //   if (val == 'F'){
+  //     moveForward();
+  //   }
+  //   if(val == 'B'){
+  //     moveBackward();
+  //   }
+  //   if(val == 'L'){
+  //     moveLeft();
+  //   }
+  //   if(val == 'R'){
+  //     moveRight();
+  //   }
+  //   if(val == 'T'){
+  //     Stop();
+  //   }
+  // }
     
-  }
-  //If only the right sensor detects a line, it calls the objectAvoid() function, moves left, and prints "TL" to the serial monitor.
-  else if (digitalRead(IrLeft) == 0 && digitalRead(IrRight) == 1 ) {
+  printValues();
+
+  // Reset the printed values to zero
+  distance = 0;
+  LeftDistance = 0;
+  RightDistance = 0;
+
+
+  IRLEFT = digitalRead(IrLeft);
+  IRRIGHT= digitalRead(IrRight);
+
+  if (!digitalRead(IrLeft) == 0 && !digitalRead(IrRight) == 0 ) {
     objectAvoid();
-    Serial.println("TR");
-    moveRight();
+  }
+  //If only the right sensor detects a line, it calls the objectAvoid() function, movesright , and prints "TR" to the serial monitor.
+  else if (digitalRead(IrLeft) == 0 && !digitalRead(IrRight) == 0 ) {
+    objectAvoid();
+    STATE = "Turn Right";
+    moveBackward();
+    delay(1);
+    moveRight();   
+  }
+  //If only the left sensor detects a line, it calls the objectAvoid() function, moves left, and prints "TL" to the serial monitor.
+  else if (!digitalRead(IrLeft) == 0 && digitalRead(IrRight) == 0 ) {
+    objectAvoid();
+    STATE = "Turn Left";
+    moveBackward();
+    delay(1);
+    moveLeft();
   }
   //If neithber sensors detect line, the motors stops.
-  else if (digitalRead(IrLeft) == 1 && digitalRead(IrRight) == 1 ) {
+  else if (digitalRead(IrLeft) == 0 && digitalRead(IrRight) == 0 ) {
     Stop();
-    TimerFreeTone(buzzer,10,1000);
-    Serial.println("Stop");
+    TimerFreeTone(buzzer,10,100);
+    STATE= "Stop";
   }
 }
 //function for detecting obstacles and avoiding them
 void objectAvoid() {
   distance = getDistance();
-  Serial.println(distance);//calls the getDistance() function and assigns its return value to the variable distance
+  //calls the getDistance() function and assigns its return value to the variable distance
   //checks whether the distance variable is less than or equal to 15 centimeters, which is the threshold distance for detecting obstacles
-  if (distance <= 15) {
+  if (distance <= set) {
     Stop();
-    Serial.println("Stop");
-    delay(100);
+    STATE = "Stop";
     moveBackward();
-    delay(200);
+    delay(300);
     Stop();
-    delay(100);
-    TimerFreeTone(buzzer,440,500);
+    // delay(100);
+    TimerFreeTone(buzzer,700,500);
     TimerFreeTone(buzzer,261,500);
 
     //These lines call the lookLeft() and lookRight() functions to measure the distance to the left and right of the robot using a servo-mounted ultrasonic sensor.
@@ -123,32 +154,33 @@ void objectAvoid() {
       Object = true;//Set the object variable to true to indicate that an obstacle has been detected on the right
       TimerFreeTone(buzzer,392,1000); 
       turn(); // call the turn() function to turn left
-      Serial.println("moveLeft");
+      STATE = "Move Left";
     //If the right distance is greater than the left distance, the robot will turn right to avoid the obstacle  
     } else {
       Object = false;
       TimerFreeTone(buzzer,440,1000);
       turn();
-      Serial.println("moveRight");
+      STATE = "Move Right";
     }
     delay(100);
   }
     //If no obstacle is detected within the threshold distance, the robot will move forward.
   else {
-    Serial.println("moveforward");
+    STATE = "Move Forward";
     moveForward();//moveForward() function to move the robot forward.
   }
 }
 // function to turn the robot when an obstacle is detected
 void turn(){
   if (Object == false){//obstacle is detected on the left side so you move right
-    Serial.println("turn Right");
     moveRight();
-    delay(800);//700
+    delay(620);//700
     moveForward();
-    delay(900);//800
+    delay(2000);//800
     moveLeft();
-    delay(1000);//1800
+    delay(700);//720
+    moveForward();
+    delay (400);
     //check if the IR sensor on the left side detects the line.If the line is detected, it calls the loop() function. If not, it calls the moveForward() function again
     if (digitalRead(IrLeft) == 1) {
       loop();
@@ -157,13 +189,14 @@ void turn(){
     }
   }
   else if (Object == true) {
-    Serial.println("turn left");//obstacle is detected on the right side so you move left
     moveLeft();
-    delay(800);//700
+    delay(620);//700
     moveForward();
-    delay(900);//800
+    delay(2000);//800
     moveRight();
-    delay(1000);//1800
+    delay(700);//720
+    moveForward();
+    delay (400);
     if (digitalRead(IrRight) == 1) {
       loop();
     } else {
@@ -178,7 +211,7 @@ int getDistance(){
   delay(50);
   int cm = sonar.ping_cm();//use the ping_cm() function of the NewPing library to measure the distance to an obstacle in centimeters and store it.
   //If the measured distance is zero or -ve, the distance is set to 100 centimeters.
-  if (cm <= 0) {
+  if (cm == 0) {
     cm = 100;
   }
   return cm;//distance is returned
@@ -186,13 +219,11 @@ int getDistance(){
 
 //detect object at the left side
 int lookLeft(){
-  servo.write(170);// set the servo position to 170 degrees which corresponds to the leftmost position.
+  servo.write(180);// set the servo position to 170 degrees which corresponds to the leftmost position.
   delay(500);//wait 500 milliseconds to allow time for the ultrasonic sensor to measure the distance.
   int dist = getDistance();
-  delay(100); //waits for 100 milliseconds.
-  servo.write(90);//sets the servo motor back to the center position (90 degrees)
-  Serial.print("Left:");
-  Serial.print(dist);
+  delay(200); //waits for 100 milliseconds.
+  servo.write(95);//sets the servo motor back to the center position (90 degrees)
   return dist;//returns the distance value.
   delay(100);
 }
@@ -200,15 +231,32 @@ int lookLeft(){
 //detect object at the Right side
 int lookRight(){
   servo.write(10);// set the servo position to 10 degrees which corresponds to the right position.
-  delay(500);//wait 5000 milliseconds to allow time for the ultrasonic sensor to measure the distance.
+  delay(500);//wait 300 milliseconds to allow time for the ultrasonic sensor to measure the distance.
   int dist = getDistance();
-  delay(100);
-  servo.write(90);
-  Serial.print("   ");
-  Serial.print("Right:");
-  Serial.println(dist);
+  delay(200);
+  servo.write(95);
   return dist;
   delay(100);
+}
+//MOTOR SPEED
+void set_Motorspeed(char g) {
+  if (g == 'L' || g == 'R' ) {
+    motor1.setSpeed(SPEED2);//130
+    motor2.setSpeed(SPEED2);
+    motor3.setSpeed(SPEED2);
+    motor4.setSpeed(SPEED2);
+  }else if(g == 'B'){
+    motor1.setSpeed(SPEED3);//100
+    motor2.setSpeed(SPEED3);
+    motor3.setSpeed(SPEED3);
+    motor4.setSpeed(SPEED3);
+  }
+  else {
+    motor1.setSpeed(SPEED1);//110
+    motor2.setSpeed(SPEED1);
+    motor3.setSpeed(SPEED1);
+    motor4.setSpeed(SPEED1);
+  }
 }
 
 //This function sets all the motors to run in the forward direction by calling the FORWARD parameter of the run() method of the AF_DCMotor library.
@@ -217,6 +265,7 @@ void moveForward(){
   motor2.run(FORWARD);
   motor3.run(FORWARD);
   motor4.run(FORWARD);
+  set_Motorspeed('F');
 }
 //This function sets all the motors to run in the backward direction by calling the BACKWARD parameter of the run() method of the AF_DCMotor library
 void moveBackward(){
@@ -224,6 +273,7 @@ void moveBackward(){
   motor2.run(BACKWARD);
   motor3.run(BACKWARD);
   motor4.run(BACKWARD);
+  set_Motorspeed('B');
 }
 //function is used to make the robot turn right. It makes the left motors turn backward and the right motors turn forward by calling the BACKWARD and FORWARD parameters of the run() method of the AF_DCMotor.
 void moveRight(){
@@ -231,6 +281,7 @@ void moveRight(){
   motor2.run(FORWARD);
   motor3.run(BACKWARD);
   motor4.run(BACKWARD);
+  set_Motorspeed('R');
 }
 //function is used to make the robot turn left. It makes the left motors turn forward and the right motors turn backward by calling the FORWARD and BACKWARD parameters of the run() method of the AF_DCMotor.
 void moveLeft(){
@@ -238,6 +289,7 @@ void moveLeft(){
   motor2.run(BACKWARD);
   motor3.run(FORWARD);
   motor4.run(FORWARD);
+  set_Motorspeed('L');
 }
 //This function stops all the motors by calling the RELEASE parameter of the run() method of the AF_DCMotor library.
 void Stop(){
@@ -248,5 +300,17 @@ void Stop(){
 }
 
 
-
-
+void printValues(){
+    Serial.print(STATE);
+    Serial.print(",");
+    Serial.print(distance);
+    Serial.print(",");
+    Serial.print(IRLEFT);
+    Serial.print(",");
+    Serial.print(IRRIGHT);
+    Serial.print(",");
+    Serial.print(LeftDistance);
+    Serial.print(",");
+    Serial.println(RightDistance);
+    // delay(2000);
+  }
