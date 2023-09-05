@@ -2,7 +2,7 @@
 #include <AFMotor.h>  // Library for the motors
 #include <Servo.h>    // Library for the servo motor
 #include <NewPing.h>  // Library for the ultrasonic sensor
-#include <IRremote.h> //Library for the IR reciever
+// #include <IRremote.h> //Library for the IR reciever
 
 
 
@@ -19,10 +19,9 @@
 #define MaxSpeed 200
 #define MaxSpeed_Offset 20
 //speed of the motoes
-#define SPEED1 58 //54
-#define SPEED2 97
-#define SPEED3 60
-
+#define SPEED1 180 //61 forward
+#define SPEED2 180 //102 left right
+#define SPEED3 180
 //creates an instance of the Servo class for controlling the servo motor.
 Servo servo;
 
@@ -73,171 +72,174 @@ void loop() {
   // put your main code here, to run repeatedly:
   //If both sensors detect a line, it calls the objectAvoid() function and moves forward
 
-  // if(Serial.available() > 0){
-  //   val = Serial.read();
-  //   Stop();
-  //   if (val == 'F'){
-  //     moveForward();
-  //   }
-  //   if(val == 'B'){
-  //     moveBackward();
-  //   }
-  //   if(val == 'L'){
-  //     moveLeft();
-  //   }
-  //   if(val == 'R'){
-  //     moveRight();
-  //   }
-  //   if(val == 'T'){
-  //     Stop();
-  //   }
-  // }
-    
-  printValues();
-
-  // Reset the printed values to zero
-  distance = 0;
-  LeftDistance = 0;
-  RightDistance = 0;
-
-
-  IRLEFT = digitalRead(IrLeft);
-  IRRIGHT= digitalRead(IrRight);
-
-  if (!digitalRead(IrLeft) == 0 && !digitalRead(IrRight) == 0 ) {
-    objectAvoid();
-  }
-  //If only the right sensor detects a line, it calls the objectAvoid() function, movesright , and prints "TR" to the serial monitor.
-  else if (digitalRead(IrLeft) == 0 && !digitalRead(IrRight) == 0 ) {
-    objectAvoid();
-    STATE = "Turn Right";
-    moveBackward();
-    delay(1);
-    moveRight();   
-  }
-  //If only the left sensor detects a line, it calls the objectAvoid() function, moves left, and prints "TL" to the serial monitor.
-  else if (!digitalRead(IrLeft) == 0 && digitalRead(IrRight) == 0 ) {
-    objectAvoid();
-    STATE = "Turn Left";
-    moveBackward();
-    delay(1);
-    moveLeft();
-  }
-  //If neithber sensors detect line, the motors stops.
-  else if (digitalRead(IrLeft) == 0 && digitalRead(IrRight) == 0 ) {
+  if(Serial.available() > 0){
+    val = Serial.read();
     Stop();
-    TimerFreeTone(buzzer,10,100);
-    STATE= "Stop";
+    if (val == 'F'){
+      moveForward();
+    }
+    if(val == 'B'){
+      moveBackward();
+    }
+    if(val == 'L'){
+      moveLeft();
+    }
+    if(val == 'R'){
+      moveRight();
+    }
+    if(val == 'T'){
+      Stop();
+    }
   }
+    
+  // printValues();
+
+  // // Reset the printed values to zero
+  // distance = 0;
+  // LeftDistance = 0;
+  // RightDistance = 0;
+
+
+  // IRLEFT = digitalRead(IrLeft);
+  // IRRIGHT= digitalRead(IrRight);
+
+  // if (!digitalRead(IrLeft) == 0 && !digitalRead(IrRight) == 0 ) {
+  //   objectAvoid();
+  // }
+  // //If only the right sensor detects a line, it calls the objectAvoid() function, movesright , and prints "TR" to the serial monitor.
+  // else if (digitalRead(IrLeft) == 0 && !digitalRead(IrRight) == 0 ) {
+  //   objectAvoid();
+  //   STATE = "Turn Right";
+  //   moveBackward();
+  //   delay(1);
+  //   moveRight();   
+  // }
+  // //If only the left sensor detects a line, it calls the objectAvoid() function, moves left, and prints "TL" to the serial monitor.
+  // else if (!digitalRead(IrLeft) == 0 && digitalRead(IrRight) == 0 ) {
+  //   objectAvoid();
+  //   STATE = "Turn Left";
+  //   moveBackward();
+  //   delay(1);
+  //   moveLeft();
+  // }
+  // //If neithber sensors detect line, the motors stops.
+  // else if (digitalRead(IrLeft) == 0 && digitalRead(IrRight) == 0 ) {
+  //   //Stop();
+  //   moveBackward();
+  //   delay(10);
+  //   TimerFreeTone(buzzer,10,100);
+  //   STATE= "Stop";
+  // }
 }
 //function for detecting obstacles and avoiding them
-void objectAvoid() {
-  distance = getDistance();
-  //calls the getDistance() function and assigns its return value to the variable distance
-  //checks whether the distance variable is less than or equal to 15 centimeters, which is the threshold distance for detecting obstacles
-  if (distance <= set) {
-    Stop();
-    STATE = "Stop";
-    moveBackward();
-    delay(300);
-    Stop();
-    // delay(100);
-    TimerFreeTone(buzzer,700,500);
-    TimerFreeTone(buzzer,261,500);
+// void objectAvoid() {
+//   distance = getDistance();
+//   //calls the getDistance() function and assigns its return value to the variable distance
+//   //checks whether the distance variable is less than or equal to 15 centimeters, which is the threshold distance for detecting obstacles
+//   if (distance <= set) {
+//     Stop();
+//     STATE = "Stop";
+//     moveBackward();
+//     delay(300);
+//     Stop();
+//     // delay(100);
+//     TimerFreeTone(buzzer,700,500);
+//     TimerFreeTone(buzzer,261,500);
 
-    //These lines call the lookLeft() and lookRight() functions to measure the distance to the left and right of the robot using a servo-mounted ultrasonic sensor.
-    LeftDistance = lookLeft();
-    RightDistance = lookRight();
+//     //These lines call the lookLeft() and lookRight() functions to measure the distance to the left and right of the robot using a servo-mounted ultrasonic sensor.
+//     LeftDistance = lookLeft();
+//     RightDistance = lookRight();
 
-    // if right distance is less than or equal to the left distance, the robot will turn left to avoid the obstacle.
-    if (RightDistance <= LeftDistance) {
-      Object = true;//Set the object variable to true to indicate that an obstacle has been detected on the right
-      TimerFreeTone(buzzer,392,1000); 
-      turn(); // call the turn() function to turn left
-      STATE = "Move Left";
-    //If the right distance is greater than the left distance, the robot will turn right to avoid the obstacle  
-    } else {
-      Object = false;
-      TimerFreeTone(buzzer,440,1000);
-      turn();
-      STATE = "Move Right";
-    }
-    delay(100);
-  }
-    //If no obstacle is detected within the threshold distance, the robot will move forward.
-  else {
-    STATE = "Move Forward";
-    moveForward();//moveForward() function to move the robot forward.
-  }
-}
-// function to turn the robot when an obstacle is detected
-void turn(){
-  if (Object == false){//obstacle is detected on the left side so you move right
-    moveRight();
-    delay(620);//700
-    moveForward();
-    delay(2000);//800
-    moveLeft();
-    delay(700);//720
-    moveForward();
-    delay (400);
-    //check if the IR sensor on the left side detects the line.If the line is detected, it calls the loop() function. If not, it calls the moveForward() function again
-    if (digitalRead(IrLeft) == 1) {
-      loop();
-    } else {
-      moveForward();
-    }
-  }
-  else if (Object == true) {
-    moveLeft();
-    delay(620);//700
-    moveForward();
-    delay(2000);//800
-    moveRight();
-    delay(700);//720
-    moveForward();
-    delay (400);
-    if (digitalRead(IrRight) == 1) {
-      loop();
-    } else {
-      moveForward();
-    }
-  }
-}
+//     // if right distance is less than or equal to the left distance, the robot will turn left to avoid the obstacle.
+//     if (RightDistance <= LeftDistance) {
+//       Object = true;//Set the object variable to true to indicate that an obstacle has been detected on the right
+//       TimerFreeTone(buzzer,392,1000); 
+//       turn(); // call the turn() function to turn left
+//       STATE = "Move Left";
+//     //If the right distance is greater than the left distance, the robot will turn right to avoid the obstacle  
+//     } else {
+//       Object = false;
+//       TimerFreeTone(buzzer,440,1000);
+//       turn();
+//       STATE = "Move Right";
+//     }
+//     delay(100);
+//   }
+//     //If no obstacle is detected within the threshold distance, the robot will move forward.
+//   else {
+//     STATE = "Move Forward";
+//     moveForward();//moveForward() function to move the robot forward.
+//   }
+
+// }
+// // function to turn the robot when an obstacle is detected
+// void turn(){
+//   if (Object == false){//obstacle is detected on the left side so you move right
+//     moveRight();
+//     delay(630);//700
+//     moveForward();
+//     delay(1800);//800
+//     moveLeft();
+//     delay(670);//720
+//     moveForward();
+//     delay (600);
+//     //check if the IR sensor on the left side detects the line.If the line is detected, it calls the loop() function. If not, it calls the moveForward() function again
+//     if (digitalRead(IrLeft) == 1) {
+//       loop();
+//     } else {
+//       moveForward();
+//     }
+//   }
+//   else if (Object == true) {
+//     moveLeft();
+//     delay(670);//700
+//     moveForward();
+//     delay(1800);//800
+//     moveRight();
+//     delay(780);//720
+//     moveForward();
+//     delay (600);
+//     if (digitalRead(IrRight) == 1) {
+//       loop();
+//     } else {
+//       moveForward();
+//     }
+//   }
+// }
 
 
-// function responsible for measuring the distance to an obstacle using a servo-mounted ultrasonic sensor.
-int getDistance(){
-  delay(50);
-  int cm = sonar.ping_cm();//use the ping_cm() function of the NewPing library to measure the distance to an obstacle in centimeters and store it.
-  //If the measured distance is zero or -ve, the distance is set to 100 centimeters.
-  if (cm == 0) {
-    cm = 100;
-  }
-  return cm;//distance is returned
-}
+// // function responsible for measuring the distance to an obstacle using a servo-mounted ultrasonic sensor.
+// int getDistance(){
+//   delay(50);
+//   int cm = sonar.ping_cm();//use the ping_cm() function of the NewPing library to measure the distance to an obstacle in centimeters and store it.
+//   //If the measured distance is zero or -ve, the distance is set to 100 centimeters.
+//   if (cm == 0) {
+//     cm = 100;
+//   }
+//   return cm;//distance is returned
+// }
 
-//detect object at the left side
-int lookLeft(){
-  servo.write(180);// set the servo position to 170 degrees which corresponds to the leftmost position.
-  delay(500);//wait 500 milliseconds to allow time for the ultrasonic sensor to measure the distance.
-  int dist = getDistance();
-  delay(200); //waits for 100 milliseconds.
-  servo.write(95);//sets the servo motor back to the center position (90 degrees)
-  return dist;//returns the distance value.
-  delay(100);
-}
+// //detect object at the left side
+// int lookLeft(){
+//   servo.write(180);// set the servo position to 170 degrees which corresponds to the leftmost position.
+//   delay(500);//wait 500 milliseconds to allow time for the ultrasonic sensor to measure the distance.
+//   int dist = getDistance();
+//   delay(200); //waits for 100 milliseconds.
+//   servo.write(95);//sets the servo motor back to the center position (90 degrees)
+//   return dist;//returns the distance value.
+//   delay(100);
+// }
 
-//detect object at the Right side
-int lookRight(){
-  servo.write(10);// set the servo position to 10 degrees which corresponds to the right position.
-  delay(500);//wait 300 milliseconds to allow time for the ultrasonic sensor to measure the distance.
-  int dist = getDistance();
-  delay(200);
-  servo.write(95);
-  return dist;
-  delay(100);
-}
+// //detect object at the Right side
+// int lookRight(){
+//   servo.write(10);// set the servo position to 10 degrees which corresponds to the right position.
+//   delay(500);//wait 300 milliseconds to allow time for the ultrasonic sensor to measure the distance.
+//   int dist = getDistance();
+//   delay(200);
+//   servo.write(95);
+//   return dist;
+//   delay(100);
+// }
 //MOTOR SPEED
 void set_Motorspeed(char g) {
   if (g == 'L' || g == 'R' ) {
